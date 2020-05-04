@@ -126,6 +126,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 * I changed the above from a WEB server to MQTT, with integration into Homeassistant
 
-* If you like my project, and can use it, please [Donate](https://www.paypal.com/donate/?token=YG750pHfLGaH5VOCVRxFU0tUUyVthC7a4oke4N308e8xsw5nnPKiBeXDUFfFOL8VCINoK0&country.x=DK&locale.x=DK).
+* If you like my project, and can use it, please [Donate](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4XDR4RG64FD7L&source=url).
 
   
