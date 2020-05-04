@@ -22,7 +22,7 @@ What things you need to install the software and how to install them
 4. MQTT server (I am running on a Synology NAS in docker)
    If you have a Synology NAS, I can recommend to follow BeardedTinker on YouTube, he makes a very intuitive explanation how to setup the whole environment on Synology.   
 
-   [](https://https://www.youtube.com/channel/UCuqokNoK8ZFNQdXxvlE129g)
+   [BeardedThinker](https://https://www.youtube.com/channel/UCuqokNoK8ZFNQdXxvlE129g)
 
 ### Installing
 
