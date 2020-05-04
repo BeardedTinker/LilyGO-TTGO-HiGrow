@@ -73,7 +73,7 @@ A step by step that tell you how to get a development/production environment up 
 ​		and the data will be available in Homeassistant.
 ​        Create a "Blink" card:
 
-![Nord-Window](\\ds918\docker\GitHub\LilyGO-TTGO-HiGrow\images\Nord-Window.JPG)
+![Nord-Window](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Nord-Window.JPG)
 
 You then just use this .ino as a master, and create a copy for each LilyGo T-Higrow V1.1 you have.
 
