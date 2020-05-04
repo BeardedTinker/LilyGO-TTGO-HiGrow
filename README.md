@@ -1,7 +1,7 @@
 # LilyGO-TTGO-HiGrow
 ## TTGO-HIGrow MQTT interface for Homeassistant
 
-![T-Higrow](\\ds918\docker\GitHub\LilyGO-TTGO-HiGrow\images\T-Higrow.jpg)
+![T-Higrow](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/T-Higrow.jpg)
 
 
 
