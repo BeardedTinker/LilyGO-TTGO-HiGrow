@@ -133,7 +133,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 I am working on a case to fit the sensor into, including a 800mA lithium battery.
 
-![Case](%5C%5Cds918%5Cdocker%5CGitHub%5CLilyGO-TTGO-HiGrow%5Cimages%5CCase.jpg)
+![Case](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case.jpg)
 
 ![Case-detail](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-detail.jpg)
 
