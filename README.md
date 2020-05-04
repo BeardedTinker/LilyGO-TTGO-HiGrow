@@ -1,7 +1,7 @@
 # LilyGO-TTGO-HiGrow
 ## TTGO-HIGrow MQTT interface for Homeassistant
 
-![T-Higrow](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/T-Higrow.jpg)
+![T-Higrow](\\ds918\docker\GitHub\LilyGO-TTGO-HiGrow\images\T-Higrow.jpg)
 
 
 
@@ -20,9 +20,9 @@ What things you need to install the software and how to install them
 3. USB Cable with USB-C to attatch to the LilyGo
 
 4. MQTT server (I am running on a Synology NAS in docker)
-   If you have a Synology NAS, I can recommend to follow [BeardedThinker](https://www.youtube.com/channel/UCuqokNoK8ZFNQdXxvlE129g) on      YouTube, he makes a very intuitive explanation how to setup the whole environment on Synology.   
+   If you have a Synology NAS, I can recommend to follow BeardedTinker on YouTube, he makes a very intuitive explanation how to setup the whole environment on Synology.   
 
-   
+   [](https://https://www.youtube.com/channel/UCuqokNoK8ZFNQdXxvlE129g)
 
 ### Installing
 
@@ -73,7 +73,7 @@ A step by step that tell you how to get a development/production environment up 
 ​		and the data will be available in Homeassistant.
 ​        Create a "Blink" card:
 
-![Nord-Window](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Nord-Window.JPG)
+![Nord-Window](\\ds918\docker\GitHub\LilyGO-TTGO-HiGrow\images\Nord-Window.JPG)
 
 You then just use this .ino as a master, and create a copy for each LilyGo T-Higrow V1.1 you have.
 
@@ -126,6 +126,15 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 * I changed the above from a WEB server to MQTT, with integration into Homeassistant
 
-* If you like my project, and can use it, please [Donate](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4XDR4RG64FD7L&source=url).
 
-  
+
+
+### 3D printed case for the sensor
+
+I am working on a case to fit the sensor into, including a 800mA lithium battery.
+
+![Case](%5C%5Cds918%5Cdocker%5CGitHub%5CLilyGO-TTGO-HiGrow%5Cimages%5CCase.jpg)
+
+![Case-detail](%5C%5Cds918%5Cdocker%5CGitHub%5CLilyGO-TTGO-HiGrow%5Cimages%5CCase-detail.jpg)
+
+I have included the original file for the cases in FreeCad format.
