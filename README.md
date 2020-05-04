@@ -135,6 +135,6 @@ I am working on a case to fit the sensor into, including a 800mA lithium battery
 
 ![Case](%5C%5Cds918%5Cdocker%5CGitHub%5CLilyGO-TTGO-HiGrow%5Cimages%5CCase.jpg)
 
-![Case-detail](%5C%5Cds918%5Cdocker%5CGitHub%5CLilyGO-TTGO-HiGrow%5Cimages%5CCase-detail.jpg)
+![Case-detail](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-detail.jpg)
 
 I have included the original file for the cases in FreeCad format.
