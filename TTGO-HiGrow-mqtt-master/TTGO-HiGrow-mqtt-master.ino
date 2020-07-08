@@ -15,10 +15,11 @@
 #include <esp_wifi.h>
 #include <esp_bt.h>
 
-const String rel = "1.1";
+//           rel = "1.2"; // Corrected error if Network not available, battery drainage solved by goto sleep 5 minutes  
+const String rel = "1.3"; // Corrected error if MQTT broker not available, battery drainage solved by goto sleep 5 minutes
 
 const char* ssid = "Your SSID";
-const char* password = "Your PassWord";
+const char* password = "Your Password";
 const char* ntpServer = "pool.ntp.org";
 
 // Off-sets for time, and summertime. each hour is 3.600 seconds.
@@ -26,18 +27,20 @@ const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
 // Device configuration and name setting, change for each different device, and device placement
-const String device_name = "Greenhouse";
-const String device_placement = "Master";
+const String device_name = "Master";
+const String device_placement = "Greenhouse";
 
 #define uS_TO_S_FACTOR 1000000ULL  //Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  3600       //Time ESP32 will go to sleep (in seconds)
 RTC_DATA_ATTR int bootCount = 0;
+int sleep5no = 0;
 
 //json construct setup
 struct Config {
   String date;
   String time;
   int bootno;
+  int sleep5no;
   float lux;
   float temp;
   float humid;
@@ -102,7 +105,7 @@ void setup() {
   if (!mqttClient.connect(broker, port)) {
     Serial.print("MQTT connection failed! Error code = ");
     Serial.println(mqttClient.connectError());
-    while (1);
+    goToDeepSleepFiveMinutes();
   }
   Serial.println("You're connected to the MQTT broker!");
   Serial.println();
@@ -208,7 +211,10 @@ void setup() {
 
 void goToDeepSleep()
 {
-  Serial.println("Going to sleep...");
+  Serial.print("Going to sleep... ");
+  Serial.print(TIME_TO_SLEEP);
+  Serial.println(" sekunder");
+
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();
@@ -223,8 +229,29 @@ void goToDeepSleep()
   // Go to sleep! Zzzz
   esp_deep_sleep_start();
 }
+void goToDeepSleepFiveMinutes()
+{
+  Serial.print("Going to sleep... ");
+  Serial.print("300");
+  Serial.println(" sekunder");
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  btStop();
+
+  adc_power_off();
+  esp_wifi_stop();
+  esp_bt_controller_disable();
+
+  // Configure the timer to wake us up!
+  ++sleep5no;  
+  esp_sleep_enable_timer_wakeup(300 * uS_TO_S_FACTOR);
+
+  // Go to sleep! Zzzz
+  esp_deep_sleep_start();
+}
 
 // READ Sensors
+// I am not quite sure how to read and use this number. I know that when put in water wich a DH value of 26, it gives a high number, but what it is and how to use ??????
 uint32_t readSalt()
 {
   uint8_t samples = 120;
@@ -233,7 +260,8 @@ uint32_t readSalt()
 
   for (int i = 0; i < samples; i++) {
     array[i] = analogRead(SALT_PIN);
-//    Serial.print("læs salt pin : ");
+//    Serial.print("laes salt pin : ");
+
 //    Serial.println(array[i]);
     delay(2);
   }
@@ -247,11 +275,13 @@ uint32_t readSalt()
 }
 
 uint16_t readSoil()
+// It is a really good thing to calibrate each unit for soil, first note the number when unit is on the table, the soil number is for zero humidity. Then place the unit up to the electronics into a glass of water, the number now is the 100% humidity.
+// By doing this you will get the same readout for each unit. Replace the value below for the dry condition, and the 100% humid condition, and you are done.
 {
   uint16_t soil = analogRead(SOIL_PIN);
-//  Serial.print("Soil before map: ");
-//  Serial.println(soil);
-  return map(soil, 1400, 3300, 100, 0);
+  Serial.print("Soil before map: ");
+  Serial.println(soil);
+  return map(soil, 1400, 3400, 100, 0);
 }
 
 float readBattery()
@@ -277,6 +307,8 @@ void saveConfiguration(const Config & config) {
   date["date"] = config.date;
   JsonObject time = doc.createNestedObject("time");
   time["time"] = config.time;
+  JsonObject sleep5Count = doc.createNestedObject("sleep5Count");
+  sleep5Count["sleep5Count"] = config.sleep5no;
   JsonObject bootCount = doc.createNestedObject("bootCount");
   bootCount["bootCount"] = config.bootno;
   JsonObject lux = doc.createNestedObject("lux");
@@ -323,7 +355,7 @@ void connectToNetwork() {
     WiFi.begin(ssid, password);
     int WLcount = 0;
     int UpCount = 0;
-    while (WiFi.status() != WL_CONNECTED && WLcount < 200 )
+    while (WiFi.status() != WL_CONNECTED )
     {
       delay( 100 );
       Serial.printf(".");
@@ -334,6 +366,9 @@ void connectToNetwork() {
       }
       ++UpCount;
       ++WLcount;
+      if (WLcount > 200) {
+        goToDeepSleepFiveMinutes();
+      }
     }
   }
 }
