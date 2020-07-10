@@ -95,9 +95,13 @@ A step by step that tell you how to get a development/production environment up 
 
 You then just use this .ino as a master, and create a copy for each LilyGo T-Higrow V1.1 you have.
 
+Follow the code, and calibrate your Soil sensor, first take the value when unit is on the table, then take the value when unit is placed in water (up to the electronics), these two readings you place in the right places of the map statement.
+
 ### Running
 
 The LilyGo T-Higrow V1.1, will wake up every (in this case) hour and report status to the MQTT server, and at the same time it will be updated in Homeassistant. It will run for approx. 2 months on a 3.7V Lithium battery.
+
+I have had a couple of units, which did not last that long. It turns out that one were using 5mA, and the other 14.6 mA when in sleep mode. They are not suitable for battery, and I have no clue why they consume this amount of power. The average consumption for my other boards are around 0.250 mA, which is according to factory specifications.
 
 You can set the wakeup time as you want. Lower time higher battery consumption, Higher time lower battery consumption.
 
@@ -128,7 +132,7 @@ See instructions under **Prerequisites**
 
 ## Versioning
 
-1.0.9
+1.5
 
 ## Authors
 
