@@ -1,22 +1,34 @@
 #include <Arduino.h>
-#include <Button2.h>
 #include <Wire.h>
 #include <BH1750.h>
 #include <DHT12.h>
 #include <Adafruit_BME280.h>
 #include <WiFi.h>
-#include <NTPClient.h>
+#include <NTPClient.h>  // Must be version 2.0.0 - later versions do not work
 #include <ArduinoJson.h>
 #include <SD.h>
 #include <SPI.h>
-#include <ArduinoMqttClient.h>
+#include <PubSubClient.h>
 
 #include "driver/adc.h"
 #include <esp_wifi.h>
 #include <esp_bt.h>
 
-//           rel = "1.2"; // Corrected error if Network not available, battery drainage solved by goto sleep 5 minutes  
-const String rel = "1.3"; // Corrected error if MQTT broker not available, battery drainage solved by goto sleep 5 minutes
+// Logfile on SPIFFS
+#include "SPIFFS.h"
+
+//           rel = "1.2"; // Corrected error if Network not available, battery drainage solved by goto sleep 5 minutes
+//           rel = "1.3"; // Corrected error if MQTT broker not available, battery drainage solved by goto sleep 5 minutes
+//           rel = "1.4"; // Calibrate SOIL info messages where to be done
+const String rel = "1.5"; // Implemented logfile in SPIFFS, and optimizing code. (DHT11 not implementet, but it only affects Air Temperature and Air Humidity, which I currently not use in my project. It will be implemented in a later release.
+
+// Turn logging on/off - turn read logfile on/off, turn delete logfile on/off ---> default is false for all 3, otherwise it can cause battery drainage.
+const bool  logging = false;
+const bool  readLogfile = false;
+const bool  deleteLogfile = false;
+String readString;
+
+const bool usingDHT12 = false;  // Set to true if using DHT12
 
 const char* ssid = "Your SSID";
 const char* password = "Your Password";
@@ -28,7 +40,7 @@ const int   daylightOffset_sec = 3600;
 
 // Device configuration and name setting, change for each different device, and device placement
 const String device_name = "Master";
-const String device_placement = "Greenhouse";
+const String device_placement = "Drivhus";
 
 #define uS_TO_S_FACTOR 1000000ULL  //Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  3600       //Time ESP32 will go to sleep (in seconds)
@@ -66,8 +78,7 @@ const int led = 13;
 BH1750 lightMeter(0x23); //0x23
 Adafruit_BME280 bmp;     //0x77 Adafruit_BME280 is technically not used, but if removed the BH1750 will not work - Any suggestions why, would be appriciated.
 DHT12 dht12(DHT12_PIN, true);
-Button2 button(BOOT_PIN);
-Button2 useButton(USER_BUTTON);
+
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 String formattedDate;
@@ -76,23 +87,62 @@ String timeStamp1;
 
 // mqtt constants
 WiFiClient wifiClient;
-MqttClient mqttClient(wifiClient);
+PubSubClient mqttClient(wifiClient);
+
 const char broker[] = "192.168.1.64";
 int        port     = 1883;
-const String topic  = device_placement + "/" + device_name ;
+const String topicStr = device_placement + "/" + device_name;
+const char* topic = topicStr.c_str();
 
 bool bme_found = false;
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Void Setup");
+
+  // Initiate SPIFFS and Mount file system
+  if (!SPIFFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    if (logging) {
+      writeFile(SPIFFS, "/error.log", "An Error has occurred while mounting SPIFFS \n");
+    }
+    return;
+  }
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Void Setup \n");
+  }
+
+  listDir(SPIFFS, "/", 0);
+  
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "After listDir \n");
+  }
+
+  if (readLogfile) {
+    // Now we start reading the files..
+    readFile(SPIFFS, "/error.log");
+    Serial.println("Here comes the logging info:");
+    Serial.println(readString);
+  }
+
+  if (deleteLogfile) {
+    SPIFFS.remove("/error.log");
+  }
+
   pinMode(led, OUTPUT);
   digitalWrite(led, 0);
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Before Start WIFI \n");
+  }
 
   // Start WiFi and update time
   connectToNetwork();
   Serial.println(" ");
   Serial.println("Connected to network");
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Connected to network \n");
+  }
+  
   Serial.println(WiFi.macAddress());
   Serial.println(WiFi.localIP());
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -100,19 +150,39 @@ void setup() {
 
   // Connect to mqtt broker
   Serial.print("Attempting to connect to the MQTT broker: ");
-  Serial.println(broker);
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Attempting to connect to the MQTT broker! \n");
+  }
 
-  if (!mqttClient.connect(broker, port)) {
+  Serial.println(broker);
+  mqttClient.setServer(broker, 1883);
+
+  if (!mqttClient.connect(broker)) {
+    if (logging) {
+      writeFile(SPIFFS, "/error.log", "MQTT connection failed! \n");
+    }
+
     Serial.print("MQTT connection failed! Error code = ");
-    Serial.println(mqttClient.connectError());
+    Serial.println(mqttClient.state());
     goToDeepSleepFiveMinutes();
   }
+
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "You're connected to the MQTT broker! \n");
+  }
+
   Serial.println("You're connected to the MQTT broker!");
   Serial.println();
 
   Wire.begin(I2C_SDA, I2C_SCL);
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Wire Begin OK! \n");
+  }
 
   dht12.begin();
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "DHT12 Begin OK! \n");
+  }
 
   //! Sensor power control pin , use deteced must set high
   pinMode(POWER_CTRL, OUTPUT);
@@ -132,16 +202,19 @@ void setup() {
     Serial.println(F("Error initialising BH1750"));
   }
   static uint64_t timestamp;
-  button.loop();
-  useButton.loop();
   float luxRead = lightMeter.readLightLevel();
   Serial.print("lux ");
   Serial.println(luxRead);
   config.lux = luxRead;
-  float t12 = dht12.readTemperature(); // Read temperature as Fahrenheit (isFahrenheit = true)
-  config.temp = t12;
-  float h12 = dht12.readHumidity();
-  config.humid = h12;
+  if (usingDHT12) {
+    float t12 = dht12.readTemperature(); // Read temperature as Fahrenheit (isFahrenheit = true)
+    config.temp = t12;
+    float h12 = dht12.readHumidity();
+    config.humid = h12;
+  } else { // Using DHT 11, correct temperature output in a later release (I am not using these figures right now in my project).
+    config.temp = 999;
+    config.humid = 999;
+  }
   uint16_t soil = readSoil();
   config.soil = soil;
   uint32_t salt = readSalt();
@@ -149,10 +222,6 @@ void setup() {
   float bat = readBattery();
   config.bat = bat;    
   config.bootno = bootCount;
-  luxRead = lightMeter.readLightLevel();
-  Serial.print("lux ");
-  Serial.println(luxRead);
-  config.lux = luxRead;
   config.rel = rel;
 
   while (!timeClient.update()) {
@@ -179,23 +248,14 @@ void setup() {
   timeStamp1 = formattedDate.substring(splitT + 1, formattedDate.length() - 1);
   config.time = timeStamp1.substring(0,5);
 
-  Serial.print("Subscribing to topic: ");
-//  Serial.println(result);
-  Serial.println();
-
-  // subscribe to a topic
-  mqttClient.subscribe(topic);
-
-  // topics can be unsubscribed using:
-  // mqttClient.unsubscribe(topic);
-
-  Serial.print("Waiting for messages on topic: ");
-  Serial.println(topic);
-  Serial.println();
-
 
   // Create JSON file
   Serial.println(F("Creating JSON document..."));
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Creating JSON document...! \n");
+  }
+
+
   saveConfiguration(config);
 
   // Go to sleep
@@ -214,14 +274,14 @@ void goToDeepSleep()
   Serial.print("Going to sleep... ");
   Serial.print(TIME_TO_SLEEP);
   Serial.println(" sekunder");
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Going to sleep for 3600 seconds \n");
+  }
 
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();
 
-  adc_power_off();
-  esp_wifi_stop();
-  esp_bt_controller_disable();
 
   // Configure the timer to wake us up!
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
@@ -234,6 +294,10 @@ void goToDeepSleepFiveMinutes()
   Serial.print("Going to sleep... ");
   Serial.print("300");
   Serial.println(" sekunder");
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Going to sleep for 300 seconds \n");
+  }
+
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();
@@ -332,15 +396,21 @@ void saveConfiguration(const Config & config) {
   serializeJson(doc, buffer);
 
   
-  mqttClient.poll();
   Serial.print("Sending message to topic: ");
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Sending message to topic: \n");
+  }
+
+
   Serial.println(buffer);
-  // send message, the Print interface can be used to set the message contents
+
   bool retained = true;
   int qos = 0;
-  mqttClient.beginMessage(topic, retained, qos);
-  mqttClient.print(buffer);
-  mqttClient.endMessage();
+  if (mqttClient.publish("Greenhouse/Master", buffer, retained)) {
+    Serial.println("Message published successfullyt");
+  } else {
+    Serial.println("Error in Message, not published");
+  }
   Serial.println();
 }
 
@@ -348,6 +418,10 @@ void connectToNetwork() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
+  if (logging) {
+    writeFile(SPIFFS, "/error.log", "Connecting to Network: \n");
+  }
+
 
   while ( WiFi.status() !=  WL_CONNECTED )
   {
@@ -372,6 +446,71 @@ void connectToNetwork() {
     }
   }
 }
+
+void writeFile(fs::FS &fs, const char * path, const char * message) {
+  Serial.printf("Writing file: %s\r\n", path);
+
+  File file = fs.open(path, FILE_APPEND);
+  if (!file) {
+    Serial.println("- failed to open file for writing");
+    return;
+  }
+  if (file.print(message)) {
+    Serial.println("- file written");
+  } else {
+    Serial.println("- frite failed");
+  }
+}
+
+void readFile(fs::FS &fs, const char * path) {
+  //  Serial.printf("Reading file: %s\r\n", path);
+  File file = fs.open(path);
+  if (!file || file.isDirectory()) {
+    Serial.println("- failed to open file for reading");
+    return;
+  }
+
+  //  Serial.println("- read from file:");
+  while (file.available()) {
+    delay(2);  //delay to allow byte to arrive in input buffer
+    char c = file.read();
+    readString += c;
+  }
+  //  Serial.println(readString);
+  file.close();
+}
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
+  Serial.printf("Listing directory: %s\r\n", dirname);
+
+  File root = fs.open(dirname);
+  if (!root) {
+    Serial.println("- failed to open directory");
+    return;
+  }
+  if (!root.isDirectory()) {
+    Serial.println(" - not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file) {
+    if (file.isDirectory()) {
+      Serial.print("  DIR : ");
+      Serial.println(file.name());
+      if (levels) {
+        listDir(fs, file.name(), levels - 1);
+      }
+    } else {
+      Serial.print("  FILE: ");
+      Serial.print(file.name());
+      Serial.print("\tSIZE: ");
+      Serial.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+
 
 void loop() {
 }
