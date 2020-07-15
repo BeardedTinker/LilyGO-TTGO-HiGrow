@@ -132,7 +132,7 @@ See instructions under **Prerequisites**
 
 ## Versioning
 
-1.5
+1.5 Major release update, introducing logging, change to PubSubClient, minor error corrections, and tuning related to battery usage.
 
 ## Authors
 
