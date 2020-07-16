@@ -406,7 +406,7 @@ void saveConfiguration(const Config & config) {
 
   bool retained = true;
   int qos = 0;
-  if (mqttClient.publish("Greenhouse/Master", buffer, retained)) {
+  if (mqttClient.publish(topic, buffer, retained)) {
     Serial.println("Message published successfullyt");
   } else {
     Serial.println("Error in Message, not published");
