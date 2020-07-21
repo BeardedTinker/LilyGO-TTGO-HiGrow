@@ -39,8 +39,8 @@ const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
 // Device configuration and name setting, change for each different device, and device placement
-const String device_name = "Master";
-const String device_placement = "Drivhus";
+const String device_name = "Plant_sensor";
+const String device_placement = "Greenhouse";
 
 #define uS_TO_S_FACTOR 1000000ULL  //Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  3600       //Time ESP32 will go to sleep (in seconds)
@@ -91,6 +91,10 @@ PubSubClient mqttClient(wifiClient);
 
 const char broker[] = "192.168.1.64";
 int        port     = 1883;
+// If MQTT username and password are used fill in next two lines
+const char mqttuser[] = "";
+const char mqttpass[] = "";
+// END If MQTT username and password are used fill in next two lines
 const String topicStr = device_placement + "/" + device_name;
 const char* topic = topicStr.c_str();
 
@@ -157,7 +161,7 @@ void setup() {
   Serial.println(broker);
   mqttClient.setServer(broker, 1883);
 
-  if (!mqttClient.connect(broker)) {
+  if (!mqttClient.connect(broker, mqttuser, mqttpass)) {
     if (logging) {
       writeFile(SPIFFS, "/error.log", "MQTT connection failed! \n");
     }
@@ -203,8 +207,9 @@ void setup() {
   }
   static uint64_t timestamp;
   float luxRead = lightMeter.readLightLevel();
-  Serial.print("lux ");
-  Serial.println(luxRead);
+  // Temporary Lux fix - disabled print here but added later.
+  //Serial.print("lux ");
+  //Serial.println(luxRead);
   config.lux = luxRead;
   if (usingDHT12) {
     float t12 = dht12.readTemperature(); // Read temperature as Fahrenheit (isFahrenheit = true)
@@ -222,6 +227,12 @@ void setup() {
   float bat = readBattery();
   config.bat = bat;    
   config.bootno = bootCount;
+  // START added to fix lux issue
+  luxRead = lightMeter.readLightLevel();
+  Serial.print("lux ");
+  Serial.println(luxRead);
+  config.lux = luxRead;
+  // END added to fix LUX issue
   config.rel = rel;
 
   while (!timeClient.update()) {
@@ -293,7 +304,7 @@ void goToDeepSleepFiveMinutes()
 {
   Serial.print("Going to sleep... ");
   Serial.print("300");
-  Serial.println(" sekunder");
+  Serial.println(" seconds");
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Going to sleep for 300 seconds \n");
   }
@@ -324,7 +335,7 @@ uint32_t readSalt()
 
   for (int i = 0; i < samples; i++) {
     array[i] = analogRead(SALT_PIN);
-//    Serial.print("laes salt pin : ");
+//    Serial.print("Read salt pin : ");
 
 //    Serial.println(array[i]);
     delay(2);
@@ -407,7 +418,7 @@ void saveConfiguration(const Config & config) {
   bool retained = true;
   int qos = 0;
   if (mqttClient.publish(topic, buffer, retained)) {
-    Serial.println("Message published successfullyt");
+    Serial.println("Message published successfully");
   } else {
     Serial.println("Error in Message, not published");
   }
