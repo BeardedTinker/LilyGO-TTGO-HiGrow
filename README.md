@@ -134,9 +134,12 @@ See instructions under **Prerequisites**
 
 1.5 Major release update, introducing logging, change to PubSubClient, minor error corrections, and tuning related to battery usage.
 
+1.6 Implementing MQTT username and password, and made compatible for DHT11, DHT12.
+
 ## Authors
 
 * **Per Rose** 
+* BeardedTinker (contributer)
 
 ## License
 
