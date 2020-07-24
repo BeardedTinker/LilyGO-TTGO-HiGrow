@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <BH1750.h>
-#include <DHT12.h>
+#include <DHT.h>
 #include <Adafruit_BME280.h>
 #include <WiFi.h>
 #include <NTPClient.h>  // Must be version 2.0.0 - later versions do not work
@@ -20,15 +20,23 @@
 //           rel = "1.2"; // Corrected error if Network not available, battery drainage solved by goto sleep 5 minutes
 //           rel = "1.3"; // Corrected error if MQTT broker not available, battery drainage solved by goto sleep 5 minutes
 //           rel = "1.4"; // Calibrate SOIL info messages where to be done
-const String rel = "1.5"; // Implemented logfile in SPIFFS, and optimizing code. (DHT11 not implementet, but it only affects Air Temperature and Air Humidity, which I currently not use in my project. It will be implemented in a later release.
+//           rel = "1.5"; // Implemented logfile in SPIFFS, and optimizing code. (DHT11 not implementet, but it only affects Air Temperature and Air Humidity, which I currently not use in my project. It will be implemented in a later release.
+const String rel = "1.6"; // Implemented MQTT userid and password, and adapted so DHT11, DHT12 and DHT22 can be used.
+// *******************************************************************************************************************************
+// START userdefined data
+// *******************************************************************************************************************************
+
 
 // Turn logging on/off - turn read logfile on/off, turn delete logfile on/off ---> default is false for all 3, otherwise it can cause battery drainage.
 const bool  logging = false;
 const bool  readLogfile = false;
 const bool  deleteLogfile = false;
-String readString;
+String readString; // do not change this variable
 
-const bool usingDHT12 = false;  // Set to true if using DHT12
+// Select DHT type on the module - supported are DHT11, DHT12, DHT22
+#define DHT_TYPE DHT11
+//#define DHT_TYPE DHT12
+//#define DHT_TYPE DHT22
 
 const char* ssid = "Your SSID";
 const char* password = "Your Password";
@@ -39,11 +47,28 @@ const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
 // Device configuration and name setting, change for each different device, and device placement
-const String device_name = "Plant_sensor";
-const String device_placement = "Greenhouse";
+const String device_name = "Master";
+const String device_placement = "Drivhus";
 
 #define uS_TO_S_FACTOR 1000000ULL  //Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  3600       //Time ESP32 will go to sleep (in seconds)
+
+// mqtt constants
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
+
+const char broker[] = "192.168.1.64";
+int        port     = 1883;
+const char mqttuser[] = ""; //add eventual mqtt username
+const char mqttpass[] = ""; //add eventual mqtt password
+
+const String topicStr = device_placement + "/" + device_name;
+const char* topic = topicStr.c_str();
+
+// *******************************************************************************************************************************
+// END userdefined data
+// *******************************************************************************************************************************
+
 RTC_DATA_ATTR int bootCount = 0;
 int sleep5no = 0;
 
@@ -67,7 +92,7 @@ const int led = 13;
 
 #define I2C_SDA             25
 #define I2C_SCL             26
-#define DHT12_PIN           16
+#define DHT_PIN             16
 #define BAT_ADC             33
 #define SALT_PIN            34
 #define SOIL_PIN            32
@@ -77,26 +102,16 @@ const int led = 13;
 
 BH1750 lightMeter(0x23); //0x23
 Adafruit_BME280 bmp;     //0x77 Adafruit_BME280 is technically not used, but if removed the BH1750 will not work - Any suggestions why, would be appriciated.
-DHT12 dht12(DHT12_PIN, true);
+
+
+DHT dht(DHT_PIN, DHT_TYPE);
+
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 String formattedDate;
 String dayStamp;
 String timeStamp1;
-
-// mqtt constants
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
-
-const char broker[] = "192.168.1.64";
-int        port     = 1883;
-// If MQTT username and password are used fill in next two lines
-const char mqttuser[] = "";
-const char mqttpass[] = "";
-// END If MQTT username and password are used fill in next two lines
-const String topicStr = device_placement + "/" + device_name;
-const char* topic = topicStr.c_str();
 
 bool bme_found = false;
 
@@ -117,7 +132,7 @@ void setup() {
   }
 
   listDir(SPIFFS, "/", 0);
-  
+
   if (logging) {
     writeFile(SPIFFS, "/error.log", "After listDir \n");
   }
@@ -146,7 +161,7 @@ void setup() {
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Connected to network \n");
   }
-  
+
   Serial.println(WiFi.macAddress());
   Serial.println(WiFi.localIP());
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -183,7 +198,7 @@ void setup() {
     writeFile(SPIFFS, "/error.log", "Wire Begin OK! \n");
   }
 
-  dht12.begin();
+  dht.begin();
   if (logging) {
     writeFile(SPIFFS, "/error.log", "DHT12 Begin OK! \n");
   }
@@ -207,32 +222,27 @@ void setup() {
   }
   static uint64_t timestamp;
   float luxRead = lightMeter.readLightLevel();
-  // Temporary Lux fix - disabled print here but added later.
-  //Serial.print("lux ");
-  //Serial.println(luxRead);
-  config.lux = luxRead;
-  if (usingDHT12) {
-    float t12 = dht12.readTemperature(); // Read temperature as Fahrenheit (isFahrenheit = true)
-    config.temp = t12;
-    float h12 = dht12.readHumidity();
-    config.humid = h12;
-  } else { // Using DHT 11, correct temperature output in a later release (I am not using these figures right now in my project).
-    config.temp = 999;
-    config.humid = 999;
-  }
+  Serial.print("lux ");
+  Serial.println(luxRead);
+  delay(2000);
+  float t12 = dht.readTemperature(); // Read temperature as Fahrenheit then dht.readTemperature(true)
+  config.temp = t12;
+  delay(2000);
+  float h12 = dht.readHumidity();
+  config.humid = h12;
   uint16_t soil = readSoil();
   config.soil = soil;
   uint32_t salt = readSalt();
   config.salt = salt;
   float bat = readBattery();
-  config.bat = bat;    
+  config.bat = bat;
   config.bootno = bootCount;
-  // START added to fix lux issue
+
+
   luxRead = lightMeter.readLightLevel();
   Serial.print("lux ");
   Serial.println(luxRead);
   config.lux = luxRead;
-  // END added to fix LUX issue
   config.rel = rel;
 
   while (!timeClient.update()) {
@@ -247,8 +257,8 @@ void setup() {
   int splitT = formattedDate.indexOf("T");
   dayStamp = formattedDate.substring(0, splitT);
   dayStamp = dayStamp.substring(5);
-  String dateMonth = dayStamp.substring(0,2);
-  String dateDay = dayStamp.substring(3,5);
+  String dateMonth = dayStamp.substring(0, 2);
+  String dateDay = dayStamp.substring(3, 5);
   Serial.print("dateMonth: ");
   Serial.println(dateMonth);
   Serial.print("dateDay: ");
@@ -257,7 +267,7 @@ void setup() {
   config.date = dayStamp;
   // Extract time
   timeStamp1 = formattedDate.substring(splitT + 1, formattedDate.length() - 1);
-  config.time = timeStamp1.substring(0,5);
+  config.time = timeStamp1.substring(0, 5);
 
 
   // Create JSON file
@@ -284,7 +294,7 @@ void goToDeepSleep()
 {
   Serial.print("Going to sleep... ");
   Serial.print(TIME_TO_SLEEP);
-  Serial.println(" sekunder");
+  Serial.println(" seconds");
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Going to sleep for 3600 seconds \n");
   }
@@ -304,7 +314,7 @@ void goToDeepSleepFiveMinutes()
 {
   Serial.print("Going to sleep... ");
   Serial.print("300");
-  Serial.println(" seconds");
+  Serial.println(" sekunder");
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Going to sleep for 300 seconds \n");
   }
@@ -318,7 +328,7 @@ void goToDeepSleepFiveMinutes()
   esp_bt_controller_disable();
 
   // Configure the timer to wake us up!
-  ++sleep5no;  
+  ++sleep5no;
   esp_sleep_enable_timer_wakeup(300 * uS_TO_S_FACTOR);
 
   // Go to sleep! Zzzz
@@ -335,9 +345,9 @@ uint32_t readSalt()
 
   for (int i = 0; i < samples; i++) {
     array[i] = analogRead(SALT_PIN);
-//    Serial.print("Read salt pin : ");
+    //    Serial.print("Read salt pin : ");
 
-//    Serial.println(array[i]);
+    //    Serial.println(array[i]);
     delay(2);
   }
   std::sort(array, array + samples);
@@ -356,7 +366,7 @@ uint16_t readSoil()
   uint16_t soil = analogRead(SOIL_PIN);
   Serial.print("Soil before map: ");
   Serial.println(soil);
-  return map(soil, 1400, 3400, 100, 0);
+  return map(soil, 1400, 3400, 100, 0); // Soil defaults - change them to your calibration data
 }
 
 float readBattery()
@@ -406,7 +416,7 @@ void saveConfiguration(const Config & config) {
   char buffer[1024];
   serializeJson(doc, buffer);
 
-  
+
   Serial.print("Sending message to topic: ");
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Sending message to topic: \n");
