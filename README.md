@@ -1,7 +1,7 @@
 # LilyGO-TTGO-HiGrow
 ## TTGO-HIGrow MQTT interface for Homeassistant
 
-![T-Higrow](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/T-Higrow.jpg)
+![T-Higrow](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/T-Higrow.jpg?raw=true)
 
 
 
@@ -91,7 +91,7 @@ A step by step that tell you how to get a development/production environment up 
 ​		and the data will be available in Homeassistant.
 ​        Create a "Blink" card:
 
-![Green-house](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Green-house.jpg)
+![Green-house](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Green-house.jpg?raw=true)
 
 You then just use this .ino as a master, and create a copy for each LilyGo T-Higrow V1.1 you have.
 
@@ -126,26 +126,26 @@ You can make the Homeassistant give you an alarm for low Soil Humidity, you will
 
 ```
 
-## Deployment
+### Deployment
 
 See instructions under **Prerequisites**
 
-## Versioning
+### Versioning
 
 1.5 Major release update, introducing logging, change to PubSubClient, minor error corrections, and tuning related to battery usage.
 
-1.6 Implementing MQTT username and password, and made compatible for DHT11, DHT12.
+1.6 Implementing MQTT username and password, and made compatible for DHT11, DHT12. (DHT22 not testet yet.)
 
-## Authors
+### Authors
 
 * **Per Rose** 
 * BeardedTinker (contributer)
 
-## License
+### License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
-## Acknowledgments
+### Acknowledgments
 
 * **Xinyuan-LilyGO / TTGO-HiGrow**  [https://github.com/Xinyuan-LilyGO/TTGO-HiGrow]( https://github.com/Xinyuan-LilyGO/TTGO-HiGrow) 
 
@@ -154,12 +154,36 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 
 
-### 3D printed case for the sensor
+## 3D printed case for the sensor
 
-I am working on a case to fit the sensor into, including a 800mA lithium battery.
+In the following you will find instructions on how to download and use the casing for the LILYGO HI-Grow sensor.
 
-![Case](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case.jpg)
+### Prerequisites
 
-![Case-detail](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-detail.jpg)
+What things you need to print the case:
+
+1. FreeCad, available from https://www.freecadweb.org/downloads.php
+2. A 3D printer
+3. Some optic cable, like this from AliExpress: https://www.aliexpress.com/item/32495181964.html?spm=a2g0s.9042311.0.0.27424c4dFTciIW
+4. A 5mm and 8mm drill, for aligning the holes for optic cable and charging plug.
+5. A C-charging plug, eg. like this from AliExpress: https://www.aliexpress.com/item/4000634865136.html?spm=a2g0s.9042311.0.0.27424c4dmTM92r
+6. A 800mA Lithium-ION battery, like this from AliExpress: https://www.aliexpress.com/item/33022823001.html?spm=a2g0s.9042311.0.0.27424c4dmElaxC
+7. A tube of Aquarium Silicone, for making expecially outdoor sensors watertight.
+
+Here are a series of images, showing the process of assemble the case after print.
+
+
+
+![Case1](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-1.jpg?raw=true)
+
+![Case1](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-2.jpg?raw=true)
+
+![Case1](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-3.jpg?raw=true)
+
+![Case1](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-4.jpg?raw=true)
+
+
+
+![Case1](https://github.com/pesor/LilyGO-TTGO-HiGrow/blob/master/images/Case-5.jpg?raw=true)
 
 I have included the original file for the cases in FreeCad format.
