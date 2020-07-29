@@ -4,7 +4,7 @@
 #include <DHT.h>
 #include <Adafruit_BME280.h>
 #include <WiFi.h>
-#include <NTPClient.h>  // Must be version 2.0.0 - later versions do not work
+#include <NTPClient.h>
 #include <ArduinoJson.h>
 #include <SD.h>
 #include <SPI.h>
@@ -25,7 +25,6 @@ const String rel = "1.6"; // Implemented MQTT userid and password, and adapted s
 // *******************************************************************************************************************************
 // START userdefined data
 // *******************************************************************************************************************************
-
 
 // Turn logging on/off - turn read logfile on/off, turn delete logfile on/off ---> default is false for all 3, otherwise it can cause battery drainage.
 const bool  logging = false;
@@ -103,9 +102,7 @@ const int led = 13;
 BH1750 lightMeter(0x23); //0x23
 Adafruit_BME280 bmp;     //0x77 Adafruit_BME280 is technically not used, but if removed the BH1750 will not work - Any suggestions why, would be appriciated.
 
-
 DHT dht(DHT_PIN, DHT_TYPE);
-
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -269,13 +266,11 @@ void setup() {
   timeStamp1 = formattedDate.substring(splitT + 1, formattedDate.length() - 1);
   config.time = timeStamp1.substring(0, 5);
 
-
   // Create JSON file
   Serial.println(F("Creating JSON document..."));
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Creating JSON document...! \n");
   }
-
 
   saveConfiguration(config);
 
@@ -302,7 +297,6 @@ void goToDeepSleep()
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();
-
 
   // Configure the timer to wake us up!
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
@@ -411,17 +405,14 @@ void saveConfiguration(const Config & config) {
   JsonObject rel = doc.createNestedObject("rel");
   rel["rel"] = config.rel;
 
-
   // Send to mqtt
   char buffer[1024];
   serializeJson(doc, buffer);
-
 
   Serial.print("Sending message to topic: ");
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Sending message to topic: \n");
   }
-
 
   Serial.println(buffer);
 
@@ -442,7 +433,6 @@ void connectToNetwork() {
   if (logging) {
     writeFile(SPIFFS, "/error.log", "Connecting to Network: \n");
   }
-
 
   while ( WiFi.status() !=  WL_CONNECTED )
   {
@@ -531,7 +521,6 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
     file = root.openNextFile();
   }
 }
-
 
 void loop() {
 }
