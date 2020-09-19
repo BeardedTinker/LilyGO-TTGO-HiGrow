@@ -331,6 +331,8 @@ void goToDeepSleepFiveMinutes()
 
 // READ Sensors
 // I am not quite sure how to read and use this number. I know that when put in water wich a DH value of 26, it gives a high number, but what it is and how to use ??????
+// Calibration is done it two medias - water only, fertilizer only - this gives minimum of water with no fertilazier and maximum in with concentration of fertilizer.
+// Target value for maximum should probably be solution of water + fertilizer in optimal value
 uint32_t readSalt()
 {
   uint8_t samples = 120;
@@ -350,7 +352,7 @@ uint32_t readSalt()
     humi += array[i];
   }
   humi /= samples - 2;
-  return humi;
+  return map(humi, 26, 350, 0, 100); // Salt defaults. It needs to be calculated too
 }
 
 uint16_t readSoil()
